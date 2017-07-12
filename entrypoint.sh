@@ -8,16 +8,16 @@ cat /tmp/build.log
 cd $APP_DIR/scripts
 
 #update web host name if ACME_WEB_HOST is set
-if [[ -z "${ACME_WEB_HOST}" ]]; then
+if [ -z "${ACME_WEB_HOST}" ]; then
    echo "Using default ACME_WEB_HOST=acmeair-web"
-   export ACME_WEB_HOST="acmeair-web"
+   export ACME_WEB_HOST=acmeair-web
 else
    echo "${ACME_WEB_HOST}" > hosts.csv
 fi
 
-if [[ -z "${ACME_WEB_PORT}" ]]; then
+if [ -z "${ACME_WEB_PORT}" ]; then
    echo "Using default ACME_WEB_PORT=3000"
-   export ACME_WEB_PORT="3000"
+   export ACME_WEB_PORT=3000
 fi
 
 echo "Waiting 2 min"
