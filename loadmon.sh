@@ -90,7 +90,7 @@ if [ $UPDATE_CFG -eq 1 ]; then
         echo $NEW_LOAD
         smc_result=$(update_sm_config "$API_KEY" $NEW_LOAD $DID)
         get_status
-        if [[ $(echo $smc_result | ./jq -r '. | has("data")') == "true" ]]; then
+        if [[ $(echo $smc_result | jq -r '. | has("data")') == "true" ]]; then
             #echo "Result:" $smc_result
             echo "Smart Config Update Job Submitted"
         fi
