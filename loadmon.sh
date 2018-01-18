@@ -1,5 +1,8 @@
 #!/bin/bash
-DEPLOYMENT=$1
+set -e # Exit with nonzero exit code if anything fails
+DEPLOYMENT=${1:?Missing required deployment name or id}
+
+set +e
 
 #function to check the exit status of a command
 get_status(){
@@ -29,10 +32,10 @@ EOL
 
 #Load conf file
 echo making sure conf file is present
-[ -f ./loadmon.conf ] || { echo "[!] ERROR: Missing apl.conf config file. Aborting."; exit 1; }
+[ -f ./loader.conf ] || { echo "[!] ERROR: Missing loader.conf config file. Aborting."; exit 1; }
 
 echo conf file found, importing conf file...
-source ./loadmon.conf
+source ./loader.conf
 get_status
 
 echo "Running loadmon for appLariat Deployment $DEPLOYMENT at $API_URL"
@@ -58,14 +61,21 @@ if [ $CFG_LOAD = "null" ]; then
     UPDATE_CFG=0
     #exit
 else
+    echo "Smart Config setup for $CFG_LOAD connections, tracking config"
     UPDATE_CFG=1
 fi
 
 #check load on server
 chk_conn=$( curl -Ss http://${ACME_WEB_HOST}/rest/api/checkstatus )
-cur_load=$( echo $chk_conn | cut -d " " -f 3 )
+if [ $? -eq 0 ]; then
+    cur_load=$( echo $chk_conn | cut -d " " -f 3 )
+else
+    echo "Unable to determine load"
+    curr_load=1
+fi
 
 cur_load=$(($cur_load * $CFG_INST))
+
 
 echo "Load at ${ACME_WEB_HOST} is $cur_load connections"
 
@@ -80,7 +90,10 @@ if [ $UPDATE_CFG -eq 1 ]; then
         echo $NEW_LOAD
         smc_result=$(update_sm_config "$API_KEY" $NEW_LOAD $DID)
         get_status
-        echo "Result:" $smc_result
+        if [[ $(echo $smc_result | ./jq -r '. | has("data")') == "true" ]]; then
+            #echo "Result:" $smc_result
+            echo "Smart Config Update Job Submitted"
+        fi
         echo
     else
         echo "Current Load less then configured load, nothing to do"

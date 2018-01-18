@@ -2,7 +2,7 @@
 export APP_DIR=/usr/local/jmeter
 export JMETER_DIR=$APP_DIR/jmeter-3.1
 
-CONCUR_THREAD=${CONCUR_THREAD:-1000}
+CONCUR_THREAD=${CONCUR_THREAD:-100}
 
 echo "Printing build log"
 cat /tmp/build.log
