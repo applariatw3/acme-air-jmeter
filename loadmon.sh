@@ -43,38 +43,56 @@ get_status
 #echo $deployment_rec
 
 DID=$(echo $deployment_rec | jq -r '.id')
-CFG_LOAD=$(echo $deployment_rec | jq -r '.analytics.load')
 ACME_WEB_HOST=$(echo $deployment_rec | jq -r '.status.summary.http_links."node-service"[0].ip')
 
 #echo $DID
-#echo $CFG_LOAD
 #echo $ACME_WEB_HOST
 
 while true; do
+
+CFG_LOAD=$(echo $deployment_rec | jq -r '.analytics.load')
+CFG_INST=$(echo $deployment_rec | jq -r '.status.components[] | select(.name == "node") | .instances')
+
+if [ $CFG_LOAD = "null" ]; then
+    echo "Deployment not setup for analytics"
+    UPDATE_CFG=0
+    #exit
+else
+    UPDATE_CFG=1
+fi
 
 #check load on server
 chk_conn=$( curl -Ss http://${ACME_WEB_HOST}/rest/api/checkstatus )
 cur_load=$( echo $chk_conn | cut -d " " -f 3 )
 
+cur_load=$(($cur_load * $CFG_INST))
+
 echo "Load at ${ACME_WEB_HOST} is $cur_load connections"
 
-#compare if current load is greater then CFG_LOAD
-if [ $cur_load -gt $CFG_LOAD ]; then
-    #Update smart config in apl
-    echo "Updating smart config for $DEPLOYMENT ..."
-    echo
-    NEW_LOAD=$(($CFG_LOAD + $LOAD_STEP))
-    echo $NEW_LOAD
-    smc_result=$(update_sm_config "$API_KEY" $NEW_LOAD $DID)
-    get_status
-    echo "Result:" $smc_result
-    echo
-else
-    echo "Current Load less then configured load"
+if [ $UPDATE_CFG -eq 1 ]; then
+
+    #compare if current load is greater then CFG_LOAD
+    if [ $cur_load -gt $CFG_LOAD ]; then
+        #Update smart config in apl
+        echo "Updating smart config for $DEPLOYMENT ..."
+        echo
+        NEW_LOAD=$(($CFG_LOAD + $LOAD_STEP))
+        echo $NEW_LOAD
+        smc_result=$(update_sm_config "$API_KEY" $NEW_LOAD $DID)
+        get_status
+        echo "Result:" $smc_result
+        echo
+    else
+        echo "Current Load less then configured load, nothing to do"
+    fi
 fi
 
 #sleep till next cycle
-sleep 30
+sleep 60
+
+#repull the deployment info
+deployment_rec=$(get_deployment "$API_KEY" "$DEPLOYMENT")
+get_status
 
 done
 
